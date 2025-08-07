@@ -308,18 +308,21 @@ def check_password():
         # Then try Streamlit secrets
         try:
             if hasattr(st, 'secrets') and st.secrets:
-                # Try APP_PASSWORD first (for consistency)
-                password = st.secrets.get('APP_PASSWORD')
-                if password:
-                    st.write(f"🔍 Password source: Streamlit secrets (APP_PASSWORD)")
-                    return password
+                st.write(f"🔍 Available Streamlit secrets keys: {list(st.secrets.keys())}")
                 
-                # Fallback to 'password' for backward compatibility
+                # Try 'password' first (this is what you have in Streamlit)
                 password = st.secrets.get('password')
                 if password:
-                    st.write(f"🔍 Password source: Streamlit secrets (password) - DEPRECATED")
+                    st.write(f"🔍 Password source: Streamlit secrets (password) - Value: {password[:3]}...")
                     return password
-        except:
+                
+                # Fallback to APP_PASSWORD for consistency
+                password = st.secrets.get('APP_PASSWORD')
+                if password:
+                    st.write(f"🔍 Password source: Streamlit secrets (APP_PASSWORD) - Value: {password[:3]}...")
+                    return password
+        except Exception as e:
+            st.write(f"🔍 Error reading Streamlit secrets: {e}")
             pass
         
         # Default password if none set (for development)
@@ -355,11 +358,17 @@ def check_password():
     
     # If password has changed, clear the session state
     if stored_password_hash and stored_password_hash != current_password_hash:
+        st.write("🔍 Password changed detected - clearing session...")
         st.session_state.clear()
         st.rerun()
     
     # Store the current password hash
     st.session_state["password_hash"] = current_password_hash
+    
+    # Add a manual refresh button for debugging
+    if st.sidebar.button("🔄 Clear Session & Refresh", type="secondary"):
+        st.session_state.clear()
+        st.rerun()
 
     # First run, show inputs for password.
     if "password_correct" not in st.session_state:
