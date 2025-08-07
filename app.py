@@ -311,10 +311,18 @@ def main():
         st.code("LINEAR_API_KEY=your_api_key_here")
         return
     
+    # Initialize session state for current release label
+    if 'current_release_label' not in st.session_state:
+        st.session_state['current_release_label'] = None
+    
     # Display stored release notes if they exist
     if 'release_notes' in st.session_state and 'release_version' in st.session_state:
         release_notes = st.session_state['release_notes']
         release_version = st.session_state['release_version']
+        
+        # Show current release label status
+        if st.session_state['current_release_label']:
+            st.info(f"🎯 **Currently working with:** {st.session_state['current_release_label']}")
         
         st.subheader(f"Generated Changelog - {release_version}")
         st.markdown(release_notes)
@@ -422,10 +430,29 @@ def main():
         elif custom_label:
             release_label = custom_label
         
+        # Show current status
+        if st.session_state['current_release_label']:
+            st.sidebar.info(f"🎯 **Current:** {st.session_state['current_release_label']}")
+            
+            # Add a clear button
+            if st.sidebar.button("🗑️ Clear Current Release", type="secondary", help="Clear the current release and start fresh"):
+                # Clear all session state
+                for key in ['release_notes', 'release_version', 'current_release_label']:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                st.success("✅ Cleared current release. Ready for a new one!")
+                st.rerun()
+        
         if st.sidebar.button("Generate Release Notes", type="primary", help="Generate release notes for the selected label"):
             if not release_label:
                 st.error("Please select a release label or enter a custom one.")
                 return
+            
+            # Clear previous session state when generating new release notes
+            if 'release_notes' in st.session_state:
+                del st.session_state['release_notes']
+            if 'release_version' in st.session_state:
+                del st.session_state['release_version']
             
             with st.spinner(f"Fetching issues for release {release_label}..."):
                 issues = get_issues_by_label(release_label)
@@ -439,8 +466,12 @@ def main():
                 # Store in session state for persistence
                 st.session_state['release_notes'] = release_notes
                 st.session_state['release_version'] = release_label
+                st.session_state['current_release_label'] = release_label
                 
-                st.success("✅ Release notes generated and stored! Check the main content area above.")
+                st.success(f"✅ Release notes generated for **{release_label}**! Check the main content area above.")
+                
+                # Force a rerun to display the new content
+                st.rerun()
             else:
                 st.warning(f"No issues found with label '{release_label}'")
     else:
@@ -452,10 +483,20 @@ def main():
             placeholder="e.g., 106.5.0"
         )
         
+        # Show current status
+        if st.session_state['current_release_label']:
+            st.sidebar.info(f"🎯 **Current:** {st.session_state['current_release_label']}")
+        
         if st.sidebar.button("Generate Release Notes", type="primary"):
             if not custom_label:
                 st.error("Please enter a release label.")
                 return
+            
+            # Clear previous session state when generating new release notes
+            if 'release_notes' in st.session_state:
+                del st.session_state['release_notes']
+            if 'release_version' in st.session_state:
+                del st.session_state['release_version']
             
             with st.spinner("Fetching issues..."):
                 issues = get_issues_by_label(custom_label)
@@ -469,8 +510,12 @@ def main():
                 # Store in session state for persistence
                 st.session_state['release_notes'] = release_notes
                 st.session_state['release_version'] = custom_label
+                st.session_state['current_release_label'] = custom_label
                 
-                st.success("✅ Release notes generated and stored! Check the main content area above.")
+                st.success(f"✅ Release notes generated for **{custom_label}**! Check the main content area above.")
+                
+                # Force a rerun to display the new content
+                st.rerun()
             else:
                 st.warning(f"No issues found with label '{custom_label}'")
     
