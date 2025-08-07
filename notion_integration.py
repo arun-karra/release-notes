@@ -38,8 +38,11 @@ class NotionIntegration:
         try:
             import streamlit as st
             if hasattr(st, 'secrets') and st.secrets:
-                return st.secrets.get(var_name)
-        except:
+                secret_value = st.secrets.get(var_name)
+                if secret_value:
+                    return secret_value
+        except Exception as e:
+            # Silently fail if Streamlit is not available
             pass
         
         return None
