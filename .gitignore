@@ -55,6 +55,7 @@ scheduler.log
 releases/
 *.md
 !README.md
+!DEPLOYMENT.md
 
 # Node.js (if using the original JS script)
 node_modules/
