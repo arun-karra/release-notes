@@ -5,6 +5,7 @@ A modern, web-based release notes generator that pulls data from Linear and prov
 ## ✨ Features
 
 - **🌐 Web Frontend**: Beautiful Streamlit-based interface accessible from anywhere
+- **🔐 Password Protection**: Secure access control to protect your release notes
 - **📊 Linear Views Integration**: Generate release notes from any Linear view, not just labels
 - **🤖 Automated Updates**: Daily automatic generation and updates via GitHub Actions
 - **📁 Cloud Hosting**: Deploy to Streamlit Cloud for easy access
@@ -14,6 +15,35 @@ A modern, web-based release notes generator that pulls data from Linear and prov
 - **📝 Notion Integration**: Sync release notes directly to Notion pages and databases
 - **🔄 Update Existing Pages**: Update existing Notion pages with new release notes
 - **🏷️ Automatic Categorization**: Extract and tag categories in Notion
+
+## 🔐 Password Protection
+
+This application includes password protection to secure access to your release notes. You must set up a password before using the application.
+
+### Setting Up Password
+
+1. **Run the password setup script**:
+   ```bash
+   python setup_password.py
+   ```
+
+2. **Follow the prompts** to create a secure password:
+   - Password must be at least 8 characters
+   - Password will be stored in your `.env` file
+   - Never commit your `.env` file to version control
+
+3. **For Streamlit Cloud deployment**:
+   - Add the password to your Streamlit secrets:
+     - Go to your Streamlit app settings
+     - Add a secret with key `password` and your chosen password as the value
+
+### Security Features
+
+- ✅ **Session-based authentication**: Password is required once per session
+- ✅ **Secure storage**: Password stored in environment variables, not in code
+- ✅ **Logout functionality**: Easy logout button in the sidebar
+- ✅ **No password persistence**: Password is not stored in browser or session state
+- ✅ **Clean logout**: Clears all session data on logout
 
 ## 🚀 Quick Start
 
@@ -153,6 +183,7 @@ Generated release notes include:
 |----------|-------------|----------|
 | `LINEAR_API_KEY` | Your Linear API key | Yes |
 | `LINEAR_WORKSPACE_URL` | Your Linear workspace URL | No (defaults to placeholder) |
+| `APP_PASSWORD` | Password for accessing the application | Yes |
 | `NOTION_TOKEN` | Your Notion integration token | No (for Notion sync) |
 | `NOTION_DATABASE_ID` | Your Notion database ID | No (optional) |
 | `NOTION_PARENT_PAGE_ID` | Your Notion parent page ID | No (optional) |

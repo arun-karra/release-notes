@@ -294,12 +294,66 @@ def generate_release_notes(issues, release_version):
     
     return markdown
 
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    
+    # Get password from environment variables or Streamlit secrets
+    def get_password():
+        # First try environment variable
+        password = os.getenv('APP_PASSWORD')
+        if password:
+            return password
+        
+        # Then try Streamlit secrets
+        try:
+            if hasattr(st, 'secrets') and st.secrets:
+                return st.secrets.get('password')
+        except:
+            pass
+        
+        # Default password if none set (for development)
+        return "changeme123"
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        correct_password = get_password()
+        if st.session_state["password"] == correct_password:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password.
+        else:
+            st.session_state["password_correct"] = False
+
+    # First run, show inputs for password.
+    if "password_correct" not in st.session_state:
+        st.markdown("---")
+        st.markdown("## 🔐 Authentication Required")
+        st.markdown("Please enter the password to access the Linear Release Notes Generator.")
+        st.text_input("Password", type="password", on_change=password_entered, key="password")
+        st.markdown("---")
+        return False
+    elif not st.session_state["password_correct"]:
+        # Password not correct, show input + error.
+        st.markdown("---")
+        st.markdown("## 🔐 Authentication Required")
+        st.markdown("Please enter the password to access the Linear Release Notes Generator.")
+        st.text_input("Password", type="password", on_change=password_entered, key="password")
+        st.error("😕 Password incorrect. Please try again.")
+        st.markdown("---")
+        return False
+    else:
+        # Password correct.
+        return True
+
 def main():
     st.set_page_config(
         page_title="Linear Release Notes Generator",
         page_icon="🚀",
         layout="wide"
     )
+    
+    # Password protection
+    if not check_password():
+        st.stop()  # Do not continue if not authenticated.
     
     # Main content area
     st.title("🚀 Linear Release Notes Generator")
@@ -395,6 +449,16 @@ def main():
     
     # Sidebar configuration
     st.sidebar.header("Configuration")
+    
+    # Add logout button at the top of sidebar
+    if st.sidebar.button("🚪 Logout", type="secondary", help="Logout and return to login screen"):
+        # Clear all session state
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.success("✅ Logged out successfully!")
+        st.rerun()
+    
+    st.sidebar.markdown("---")
     
     # Release Label generation only
     st.sidebar.subheader("Release Labels")
