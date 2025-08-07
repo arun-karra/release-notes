@@ -83,32 +83,6 @@ class NotionIntegration:
                 if database_id:
                     db_properties = self._get_database_schema(database_id)
                     
-                    # Add Version if it exists (rich_text, text, or select)
-                    if 'Version' in db_properties:
-                        prop_type = db_properties['Version'].get('type', 'rich_text')
-                        if prop_type == 'rich_text':
-                            properties["Version"] = {
-                                "rich_text": [
-                                    {
-                                        "text": {
-                                            "content": release_version
-                                        }
-                                    }
-                                ]
-                            }
-                        elif prop_type == 'text':
-                            properties["Version"] = {
-                                "text": {
-                                    "content": release_version
-                                }
-                            }
-                        elif prop_type == 'select':
-                            properties["Version"] = {
-                                "select": {
-                                    "name": release_version
-                                }
-                            }
-                    
                     # Add Date if it exists (date type)
                     if 'Date' in db_properties:
                         properties["Date"] = {
@@ -123,81 +97,6 @@ class NotionIntegration:
                             "date": {
                                 "start": datetime.now().isoformat()
                             }
-                        }
-                    
-                    # Add Last Modified if it exists (date type)
-                    if 'Last Modified' in db_properties:
-                        properties["Last Modified"] = {
-                            "date": {
-                                "start": datetime.now().isoformat()
-                            }
-                        }
-                    
-                    # Add Status if it exists (select type)
-                    if 'Status' in db_properties:
-                        properties["Status"] = {
-                            "select": {
-                                "name": "Published"
-                            }
-                        }
-                    
-                    # Add Type if it exists (select type)
-                    if 'Type' in db_properties:
-                        properties["Type"] = {
-                            "select": {
-                                "name": "Release Notes"
-                            }
-                        }
-                    
-                    # Add Category if it exists (select or multi_select type)
-                    if 'Category' in db_properties:
-                        prop_type = db_properties['Category'].get('type', 'select')
-                        if prop_type == 'select':
-                            properties["Category"] = {
-                                "select": {
-                                    "name": "Release Notes"
-                                }
-                            }
-                        elif prop_type == 'multi_select':
-                            properties["Category"] = {
-                                "multi_select": [
-                                    {"name": "Release Notes"}
-                                ]
-                            }
-                    
-                    # Add Tags if it exists (multi_select type)
-                    if 'Tags' in db_properties:
-                        # Extract categories from content
-                        categories = self._extract_categories(markdown_content)
-                        if categories:
-                            properties["Tags"] = {
-                                "multi_select": [{"name": cat} for cat in categories[:5]]  # Limit to 5 tags
-                            }
-                    
-                    # Add Priority if it exists (select type)
-                    if 'Priority' in db_properties:
-                        properties["Priority"] = {
-                            "select": {
-                                "name": "Medium"
-                            }
-                        }
-                    
-                    # Add Description if it exists (rich_text type)
-                    if 'Description' in db_properties:
-                        # Extract first few lines as description
-                        lines = markdown_content.split('\n')[:3]
-                        description = ' '.join([line.strip() for line in lines if line.strip()])
-                        if len(description) > 200:
-                            description = description[:197] + "..."
-                        
-                        properties["Description"] = {
-                            "rich_text": [
-                                {
-                                    "text": {
-                                        "content": description
-                                    }
-                                }
-                            ]
                         }
                     
             except Exception as e:
@@ -254,50 +153,19 @@ class NotionIntegration:
             # Convert markdown to Notion blocks
             blocks = self._markdown_to_notion_blocks(markdown_content)
             
-            # Clear existing content and add new content
-            self.client.blocks.children.delete(page_id)
-            self.client.blocks.children.append(page_id, children=blocks)
-            
-            # Try to update the last modified date if the property exists
+            # Clear existing content by getting all blocks and deleting them one by one
             try:
-                # Get the page to check its properties
-                page_properties = self._get_page_properties(page_id)
-                
-                # Prepare properties to update
-                update_properties = {}
-                
-                # Add Last Modified if it exists
-                if 'Last Modified' in page_properties:
-                    update_properties["Last Modified"] = {
-                        "date": {
-                            "start": datetime.now().isoformat()
-                        }
-                    }
-                
-                # Add Modified Date if it exists
-                if 'Modified Date' in page_properties:
-                    update_properties["Modified Date"] = {
-                        "date": {
-                            "start": datetime.now().isoformat()
-                        }
-                    }
-                
-                # Add Updated At if it exists
-                if 'Updated At' in page_properties:
-                    update_properties["Updated At"] = {
-                        "date": {
-                            "start": datetime.now().isoformat()
-                        }
-                    }
-                
-                # Update properties if any exist
-                if update_properties:
-                    self.client.pages.update(page_id, properties=update_properties)
-                    
+                existing_blocks = self.client.blocks.children.list(page_id)
+                for block in existing_blocks.get('results', []):
+                    try:
+                        self.client.blocks.delete(block['id'])
+                    except Exception as e:
+                        print(f"Warning: Could not delete block {block['id']}: {e}")
             except Exception as e:
-                # If we can't update properties, just continue
-                print(f"Warning: Could not update page properties: {e}")
-                pass
+                print(f"Warning: Could not clear existing content: {e}")
+            
+            # Add new content
+            self.client.blocks.children.append(page_id, children=blocks)
             
             return True
             
@@ -361,7 +229,7 @@ class NotionIntegration:
     
     def _markdown_to_notion_blocks(self, markdown_content: str) -> List[Dict[str, Any]]:
         """
-        Convert markdown content to Notion blocks
+        Convert markdown content to Notion blocks with proper rich text formatting
         
         Args:
             markdown_content: Markdown string
@@ -379,73 +247,225 @@ class NotionIntegration:
             
             # Handle headers
             if line.startswith('# '):
+                rich_text = self._parse_rich_text(line[2:])
                 blocks.append({
                     "object": "block",
                     "type": "heading_1",
                     "heading_1": {
-                        "rich_text": [{"text": {"content": line[2:]}}]
+                        "rich_text": rich_text
                     }
                 })
             elif line.startswith('## '):
+                rich_text = self._parse_rich_text(line[3:])
                 blocks.append({
                     "object": "block",
                     "type": "heading_2",
                     "heading_2": {
-                        "rich_text": [{"text": {"content": line[3:]}}]
+                        "rich_text": rich_text
                     }
                 })
             elif line.startswith('### '):
+                rich_text = self._parse_rich_text(line[4:])
                 blocks.append({
                     "object": "block",
                     "type": "heading_3",
                     "heading_3": {
-                        "rich_text": [{"text": {"content": line[4:]}}]
+                        "rich_text": rich_text
                     }
                 })
             
             # Handle bullet points
             elif line.startswith('- '):
-                # Extract link if present
-                link_match = re.search(r'\[([^\]]+)\]\(([^)]+)\)', line)
-                if link_match:
-                    link_text = link_match.group(1)
-                    link_url = link_match.group(2)
-                    content = line[2:].replace(f'[{link_text}]({link_url})', link_text)
-                    
-                    blocks.append({
-                        "object": "block",
-                        "type": "bulleted_list_item",
-                        "bulleted_list_item": {
-                            "rich_text": [
-                                {
-                                    "text": {
-                                        "content": content,
-                                        "link": {"url": link_url}
-                                    }
-                                }
-                            ]
-                        }
-                    })
-                else:
-                    blocks.append({
-                        "object": "block",
-                        "type": "bulleted_list_item",
-                        "bulleted_list_item": {
-                            "rich_text": [{"text": {"content": line[2:]}}]
-                        }
-                    })
+                content = line[2:]
+                rich_text = self._parse_rich_text(content)
+                
+                blocks.append({
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {
+                        "rich_text": rich_text
+                    }
+                })
+            
+            # Handle numbered lists
+            elif re.match(r'^\d+\. ', line):
+                content = re.sub(r'^\d+\. ', '', line)
+                rich_text = self._parse_rich_text(content)
+                
+                blocks.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
+                        "rich_text": rich_text
+                    }
+                })
             
             # Handle regular text
             else:
+                rich_text = self._parse_rich_text(line)
                 blocks.append({
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": [{"text": {"content": line}}]
+                        "rich_text": rich_text
                     }
                 })
         
         return blocks
+    
+    def _parse_rich_text(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Parse markdown text and convert to Notion rich text format
+        
+        Args:
+            text: Markdown text string
+            
+        Returns:
+            List of rich text objects
+        """
+        rich_text = []
+        current_pos = 0
+        
+        # Handle links first (they can contain other formatting)
+        while True:
+            link_match = re.search(r'\[([^\]]+)\]\(([^)]+)\)', text[current_pos:])
+            if not link_match:
+                break
+            
+            link_start = current_pos + link_match.start()
+            link_end = current_pos + link_match.end()
+            
+            # Add text before the link
+            if link_start > current_pos:
+                before_text = text[current_pos:link_start]
+                rich_text.extend(self._parse_inline_formatting(before_text))
+            
+            # Add the link
+            link_text = link_match.group(1)
+            link_url = link_match.group(2)
+            rich_text.append({
+                "text": {
+                    "content": link_text,
+                    "link": {"url": link_url}
+                }
+            })
+            
+            current_pos = link_end
+        
+        # Add remaining text
+        if current_pos < len(text):
+            remaining_text = text[current_pos:]
+            rich_text.extend(self._parse_inline_formatting(remaining_text))
+        
+        return rich_text
+    
+    def _parse_inline_formatting(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Parse inline markdown formatting (bold, italic, etc.)
+        
+        Args:
+            text: Text with inline formatting
+            
+        Returns:
+            List of rich text objects
+        """
+        if not text:
+            return []
+        
+        rich_text = []
+        current_pos = 0
+        
+        # Handle bold text (**text**)
+        while True:
+            bold_match = re.search(r'\*\*([^*]+)\*\*', text[current_pos:])
+            if not bold_match:
+                break
+            
+            bold_start = current_pos + bold_match.start()
+            bold_end = current_pos + bold_match.end()
+            
+            # Add text before the bold
+            if bold_start > current_pos:
+                before_text = text[current_pos:bold_start]
+                rich_text.extend(self._parse_italic_formatting(before_text))
+            
+            # Add the bold text
+            bold_content = bold_match.group(1)
+            rich_text.append({
+                "text": {
+                    "content": bold_content
+                },
+                "annotations": {
+                    "bold": True
+                }
+            })
+            
+            current_pos = bold_end
+        
+        # Handle remaining text for italic formatting
+        if current_pos < len(text):
+            remaining_text = text[current_pos:]
+            rich_text.extend(self._parse_italic_formatting(remaining_text))
+        
+        return rich_text
+    
+    def _parse_italic_formatting(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Parse italic markdown formatting (*text*)
+        
+        Args:
+            text: Text with italic formatting
+            
+        Returns:
+            List of rich text objects
+        """
+        if not text:
+            return []
+        
+        rich_text = []
+        current_pos = 0
+        
+        # Handle italic text (*text*)
+        while True:
+            italic_match = re.search(r'\*([^*]+)\*', text[current_pos:])
+            if not italic_match:
+                break
+            
+            italic_start = current_pos + italic_match.start()
+            italic_end = current_pos + italic_match.end()
+            
+            # Add text before the italic
+            if italic_start > current_pos:
+                before_text = text[current_pos:italic_start]
+                rich_text.append({
+                    "text": {
+                        "content": before_text
+                    }
+                })
+            
+            # Add the italic text
+            italic_content = italic_match.group(1)
+            rich_text.append({
+                "text": {
+                    "content": italic_content
+                },
+                "annotations": {
+                    "italic": True
+                }
+            })
+            
+            current_pos = italic_end
+        
+        # Add remaining text
+        if current_pos < len(text):
+            remaining_text = text[current_pos:]
+            rich_text.append({
+                "text": {
+                    "content": remaining_text
+                }
+            })
+        
+        return rich_text
     
     def _extract_categories(self, markdown_content: str) -> List[str]:
         """
