@@ -376,11 +376,13 @@ def main():
                 # Notion Integration
                 if is_notion_configured():
                     st.subheader("📝 Sync to Notion")
+                    st.info("Notion is configured and ready!")
                     
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        if st.button("Create New Notion Page", type="secondary"):
+                        if st.button("Create New Notion Page", type="secondary", key="create_notion_page"):
+                            st.write("Button clicked! Starting Notion page creation...")
                             try:
                                 notion = NotionIntegration()
                                 database_id = st.session_state.get('selected_database_id')
@@ -464,17 +466,21 @@ def main():
                 # Notion Integration
                 if is_notion_configured():
                     st.subheader("📝 Sync to Notion")
+                    st.info("Notion is configured and ready!")
                     
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        if st.button("Create New Notion Page", type="secondary"):
+                        if st.button("Create New Notion Page", type="secondary", key="create_notion_page_custom"):
+                            st.write("Button clicked! Starting Notion page creation...")
                             try:
                                 notion = NotionIntegration()
                                 database_id = st.session_state.get('selected_database_id')
                                 
                                 # Debug information
                                 st.info(f"Debug: database_id = {database_id}")
+                                st.info(f"Debug: release_version = {custom_label}")
+                                st.info(f"Debug: content length = {len(release_notes)} characters")
                                 
                                 with st.spinner("Creating Notion page..."):
                                     page_id = notion.create_release_notes_page(
@@ -489,6 +495,8 @@ def main():
                                 st.error(f"❌ Failed to create Notion page: {str(e)}")
                                 # Add more detailed error information
                                 st.error(f"Error details: {type(e).__name__}: {str(e)}")
+                                import traceback
+                                st.error(f"Traceback: {traceback.format_exc()}")
                     
                     with col2:
                         if st.button("Update Existing Page", type="secondary"):
