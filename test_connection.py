@@ -6,6 +6,7 @@ Test script to verify Linear API connection and configuration
 import os
 import requests
 from dotenv import load_dotenv
+import re # Added for regex matching in test_release_labels
 
 # Load environment variables
 load_dotenv()
@@ -199,6 +200,78 @@ def test_views_access():
         print(f"❌ Teams access failed: {e}")
         return False
 
+def test_release_labels():
+    """Test release labels access"""
+    print("\n🏷️ Testing release labels access...")
+    
+    api_key = os.getenv('LINEAR_API_KEY')
+    url = 'https://api.linear.app/graphql'
+    headers = {
+        'Authorization': api_key,
+        'Content-Type': 'application/json',
+    }
+    
+    query = """
+    query {
+        viewer {
+            organization {
+                labels {
+                    nodes {
+                        name
+                        createdAt
+                        parent {
+                            name
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    
+    payload = {
+        'query': query
+    }
+    
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if 'errors' in data:
+            print(f"❌ Release labels access error: {data['errors']}")
+            return False
+        
+        labels = data.get('data', {}).get('viewer', {}).get('organization', {}).get('labels', {}).get('nodes', [])
+        
+        # Filter for labels that belong to the "Release" group
+        release_labels = []
+        for label in labels:
+            # Check if the label has a parent group named "Release"
+            parent = label.get('parent')
+            if parent and parent.get('name') == 'Release':
+                release_labels.append(label)
+            # Also include labels that start with version numbers (fallback)
+            elif re.match(r'^\d+\.\d+\.\d+', label['name']):
+                release_labels.append(label)
+        
+        if release_labels:
+            print(f"✅ Release labels access successful!")
+            print(f"   Release labels found: {len(release_labels)}")
+            for label in release_labels[:5]:  # Show first 5 labels
+                print(f"     - {label.get('name', 'Unknown')}")
+            if len(release_labels) > 5:
+                print(f"     ... and {len(release_labels) - 5} more")
+            return True
+        else:
+            print("⚠️  No release labels found")
+            return True
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Release labels access failed: {e}")
+        return False
+
 def main():
     """Main test function"""
     print("🚀 Linear Release Notes Generator - Connection Test")
@@ -216,6 +289,10 @@ def main():
     # Test views access
     if not test_views_access():
         print("\n⚠️  Views access test failed. View-based generation may not work.")
+    
+    # Test release labels access
+    if not test_release_labels():
+        print("\n⚠️  Release labels access test failed. Label-based generation may not work.")
     
     print("\n" + "=" * 60)
     print("✅ All tests completed!")

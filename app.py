@@ -192,6 +192,9 @@ def get_release_labels():
                         name
                         createdAt
                         description
+                        parent {
+                            name
+                        }
                     }
                 }
             }
@@ -206,15 +209,26 @@ def get_release_labels():
     
     labels = result.get('data', {}).get('viewer', {}).get('organization', {}).get('labels', {}).get('nodes', [])
     
-    # Filter for release labels (assuming they follow a version pattern like X.Y.Z)
-    import re
-    release_pattern = re.compile(r'^\d+\.\d+\.\d+$')
-    release_labels = [label for label in labels if release_pattern.match(label['name'])]
+    # Filter for labels that belong to the "Release" group
+    release_labels = []
+    for label in labels:
+        # Check if the label has a parent group named "Release"
+        parent = label.get('parent')
+        if parent and parent.get('name') == 'Release':
+            release_labels.append(label)
+        # Also include labels that start with version numbers (fallback)
+        elif re.match(r'^\d+\.\d+\.\d+', label['name']):
+            release_labels.append(label)
     
     # Sort by version number (newest first)
     def version_key(label):
-        parts = label['name'].split('.')
-        return [int(part) for part in parts]
+        # Extract version number from the beginning of the label name
+        version_match = re.match(r'^(\d+\.\d+\.\d+)', label['name'])
+        if version_match:
+            version = version_match.group(1)
+            parts = version.split('.')
+            return [int(part) for part in parts]
+        return [0, 0, 0]  # Default for non-version labels
     
     release_labels.sort(key=version_key, reverse=True)
     return release_labels
@@ -336,7 +350,8 @@ def main():
             selected_label = st.sidebar.selectbox(
                 "Choose a release label",
                 ["Select a release label..."] + label_options,
-                index=0
+                index=0,
+                help="Select a release label from the 'Release' group to generate release notes"
             )
             
             # Manual input option
@@ -354,12 +369,12 @@ def main():
             elif custom_label:
                 release_label = custom_label
             
-            if st.sidebar.button("Generate Release Notes", type="primary"):
+            if st.sidebar.button("Generate Release Notes", type="primary", help="Generate release notes for the selected label"):
                 if not release_label:
                     st.error("Please select a release label or enter a custom one.")
                     return
                 
-                with st.spinner("Fetching issues..."):
+                with st.spinner(f"Fetching issues for release {release_label}..."):
                     issues = get_issues_by_label(release_label)
                 
                 if issues:
