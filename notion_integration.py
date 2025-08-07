@@ -135,12 +135,6 @@ class NotionIntegration:
             
             page_id = page["id"]
             
-            # Generate AI summary and add it to the page
-            try:
-                self._generate_ai_summary(page_id, markdown_content)
-            except Exception as e:
-                print(f"Warning: Could not generate AI summary: {e}")
-            
             return page_id
             
         except Exception as e:
@@ -174,12 +168,6 @@ class NotionIntegration:
             
             # Add new content
             self.client.blocks.children.append(page_id, children=blocks)
-            
-            # Generate AI summary and add it to the page
-            try:
-                self._generate_ai_summary(page_id, markdown_content)
-            except Exception as e:
-                print(f"Warning: Could not generate AI summary: {e}")
             
             return True
             
@@ -584,150 +572,6 @@ class NotionIntegration:
         except Exception as e:
             print(f"Warning: Failed to get pages: {str(e)}")
             return []
-
-    def _generate_ai_summary(self, page_id: str, markdown_content: str) -> bool:
-        """
-        Generate an AI summary of the changelog using Notion AI
-        
-        Args:
-            page_id: Notion page ID to add summary to
-            markdown_content: Original markdown content
-            
-        Returns:
-            True if successful
-        """
-        try:
-            # Check if summary already exists
-            existing_blocks = self.client.blocks.children.list(page_id)
-            for block in existing_blocks.get('results', []):
-                if block.get('type') == 'heading_2':
-                    rich_text = block.get('heading_2', {}).get('rich_text', [])
-                    if rich_text and any('summary' in rt.get('text', {}).get('content', '').lower() for rt in rich_text):
-                        print("Summary already exists, skipping...")
-                        return True
-            
-            # Create a simple summary (since Notion AI API might not be publicly available)
-            summary = self._create_simple_summary(markdown_content)
-            
-            # Add the summary to the page
-            self.client.blocks.children.append(
-                page_id,
-                children=[
-                    {
-                        "object": "block",
-                        "type": "heading_2",
-                        "heading_2": {
-                            "rich_text": [
-                                {
-                                    "text": {
-                                        "content": "📋 Release Summary"
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [
-                                {
-                                    "text": {
-                                        "content": summary
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        "object": "block",
-                        "type": "divider",
-                        "divider": {}
-                    }
-                ]
-            )
-            
-            return True
-            
-        except Exception as e:
-            print(f"Warning: Could not generate AI summary: {e}")
-            return False
-    
-    def _create_simple_summary(self, markdown_content: str) -> str:
-        """
-        Create a simple summary when AI is not available
-        
-        Args:
-            markdown_content: Original markdown content
-            
-        Returns:
-            Simple summary string
-        """
-        try:
-            # Extract key information from the changelog
-            lines = markdown_content.split('\n')
-            summary_parts = []
-            
-            # Count different types of changes
-            bug_fixes = 0
-            new_features = 0
-            improvements = 0
-            other_changes = 0
-            
-            current_section = ""
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('## 🐛 Bug Fixes'):
-                    current_section = "bug_fixes"
-                elif line.startswith('## ✨ New Features'):
-                    current_section = "new_features"
-                elif line.startswith('## ⚡ Improvements'):
-                    current_section = "improvements"
-                elif line.startswith('- ') and current_section:
-                    if current_section == "bug_fixes":
-                        bug_fixes += 1
-                    elif current_section == "new_features":
-                        new_features += 1
-                    elif current_section == "improvements":
-                        improvements += 1
-                    else:
-                        other_changes += 1
-            
-            # Create a user-friendly summary
-            total_changes = bug_fixes + new_features + improvements + other_changes
-            
-            if total_changes == 0:
-                return "This release includes various updates and improvements to enhance the overall user experience."
-            
-            summary_parts.append("🎯 **Release Overview**")
-            summary_parts.append(f"\nThis release brings {total_changes} total change{'s' if total_changes > 1 else ''} to improve your experience:")
-            
-            if new_features > 0:
-                summary_parts.append(f"• ✨ **{new_features} new feature{'s' if new_features > 1 else ''}** - Exciting additions to enhance functionality")
-            
-            if improvements > 0:
-                summary_parts.append(f"• ⚡ **{improvements} improvement{'s' if improvements > 1 else ''}** - Enhanced performance and user experience")
-            
-            if bug_fixes > 0:
-                summary_parts.append(f"• 🐛 **{bug_fixes} bug fix{'es' if bug_fixes > 1 else ''}** - Resolved issues for smoother operation")
-            
-            if other_changes > 0:
-                summary_parts.append(f"• 🔧 **{other_changes} other change{'s' if other_changes > 1 else ''}** - Additional updates and refinements")
-            
-            # Add a conclusion
-            if new_features > 0:
-                summary_parts.append(f"\n🚀 **What's New**: This release introduces {new_features} new feature{'s' if new_features > 1 else ''} that will enhance your workflow.")
-            
-            if bug_fixes > 0:
-                summary_parts.append(f"🔧 **Stability**: {bug_fixes} bug fix{'es' if bug_fixes > 1 else ''} ensure a more reliable experience.")
-            
-            summary_parts.append("\n💡 **Recommendation**: Update to this version to take advantage of the latest improvements and new features.")
-            
-            return " ".join(summary_parts)
-            
-        except Exception as e:
-            return "🎯 **Release Overview**\n\nThis release includes various updates and improvements to enhance the overall user experience. We recommend updating to this version to take advantage of the latest features and bug fixes."
 
 def test_notion_connection():
     """Test Notion API connection"""
