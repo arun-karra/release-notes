@@ -317,7 +317,15 @@ def check_password():
     def password_entered():
         """Checks whether a password entered by the user is correct."""
         correct_password = get_password()
-        if st.session_state["password"] == correct_password:
+        user_password = st.session_state.get("password", "")
+        
+        # Debug information (only show if debug mode is enabled)
+        if st.session_state.get("debug_password", False):
+            st.write(f"Debug: User entered password length: {len(user_password)}")
+            st.write(f"Debug: Expected password length: {len(correct_password) if correct_password else 0}")
+            st.write(f"Debug: Passwords match: {user_password == correct_password}")
+        
+        if user_password == correct_password:
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # Don't store password.
         else:
@@ -328,6 +336,10 @@ def check_password():
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
+        
+        # Debug checkbox (only show in development)
+        if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
+            st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
         
         # Create a container for better styling
         with st.container():
@@ -347,6 +359,10 @@ def check_password():
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
+        
+        # Debug checkbox (only show in development)
+        if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
+            st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
         
         # Create a container for better styling
         with st.container():
