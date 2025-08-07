@@ -277,7 +277,7 @@ def generate_release_notes(issues, release_version):
         })
     
     # Generate markdown
-    markdown = f"# 🚀 Release Notes - {release_version}\n\n"
+    markdown = f"# 🚀 Changelog - {release_version}\n\n"
     markdown += f"*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
     
     for category, issues_list in categorized_issues.items():
@@ -316,7 +316,7 @@ def main():
         release_notes = st.session_state['release_notes']
         release_version = st.session_state['release_version']
         
-        st.subheader(f"Generated Release Notes - {release_version}")
+        st.subheader(f"Generated Changelog - {release_version}")
         st.markdown(release_notes)
         
         # Download button

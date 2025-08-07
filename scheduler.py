@@ -208,7 +208,7 @@ def generate_release_notes(issues, release_version):
         })
     
     # Generate markdown
-    markdown = f"# 🚀 Release Notes - {release_version}\n\n"
+    markdown = f"# 🚀 Changelog - {release_version}\n\n"
     markdown += f"*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n\n"
     
     for category, issues_list in categorized_issues.items():

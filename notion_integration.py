@@ -64,13 +64,13 @@ class NotionIntegration:
             # Convert markdown to Notion blocks
             blocks = self._markdown_to_notion_blocks(markdown_content)
             
-            # Prepare page properties - use simpler properties that are more likely to exist
+            # Prepare page properties - start with the required Name property
             properties = {
                 "Name": {
                     "title": [
                         {
                             "text": {
-                                "content": f"Release Notes - {release_version}"
+                                "content": f"Changelog - {release_version}"
                             }
                         }
                     ]
@@ -81,22 +81,35 @@ class NotionIntegration:
             try:
                 # Get database schema to see what properties are available
                 if database_id:
-                    database = self.client.databases.retrieve(database_id=database_id)
-                    db_properties = database.get('properties', {})
+                    db_properties = self._get_database_schema(database_id)
                     
-                    # Add Version if it exists
+                    # Add Version if it exists (rich_text, text, or select)
                     if 'Version' in db_properties:
-                        properties["Version"] = {
-                            "rich_text": [
-                                {
-                                    "text": {
-                                        "content": release_version
+                        prop_type = db_properties['Version'].get('type', 'rich_text')
+                        if prop_type == 'rich_text':
+                            properties["Version"] = {
+                                "rich_text": [
+                                    {
+                                        "text": {
+                                            "content": release_version
+                                        }
                                     }
+                                ]
+                            }
+                        elif prop_type == 'text':
+                            properties["Version"] = {
+                                "text": {
+                                    "content": release_version
                                 }
-                            ]
-                        }
+                            }
+                        elif prop_type == 'select':
+                            properties["Version"] = {
+                                "select": {
+                                    "name": release_version
+                                }
+                            }
                     
-                    # Add Date if it exists
+                    # Add Date if it exists (date type)
                     if 'Date' in db_properties:
                         properties["Date"] = {
                             "date": {
@@ -104,15 +117,92 @@ class NotionIntegration:
                             }
                         }
                     
-                    # Add Status if it exists
+                    # Add Created Date if it exists (date type)
+                    if 'Created Date' in db_properties:
+                        properties["Created Date"] = {
+                            "date": {
+                                "start": datetime.now().isoformat()
+                            }
+                        }
+                    
+                    # Add Last Modified if it exists (date type)
+                    if 'Last Modified' in db_properties:
+                        properties["Last Modified"] = {
+                            "date": {
+                                "start": datetime.now().isoformat()
+                            }
+                        }
+                    
+                    # Add Status if it exists (select type)
                     if 'Status' in db_properties:
                         properties["Status"] = {
                             "select": {
                                 "name": "Published"
                             }
                         }
+                    
+                    # Add Type if it exists (select type)
+                    if 'Type' in db_properties:
+                        properties["Type"] = {
+                            "select": {
+                                "name": "Release Notes"
+                            }
+                        }
+                    
+                    # Add Category if it exists (select or multi_select type)
+                    if 'Category' in db_properties:
+                        prop_type = db_properties['Category'].get('type', 'select')
+                        if prop_type == 'select':
+                            properties["Category"] = {
+                                "select": {
+                                    "name": "Release Notes"
+                                }
+                            }
+                        elif prop_type == 'multi_select':
+                            properties["Category"] = {
+                                "multi_select": [
+                                    {"name": "Release Notes"}
+                                ]
+                            }
+                    
+                    # Add Tags if it exists (multi_select type)
+                    if 'Tags' in db_properties:
+                        # Extract categories from content
+                        categories = self._extract_categories(markdown_content)
+                        if categories:
+                            properties["Tags"] = {
+                                "multi_select": [{"name": cat} for cat in categories[:5]]  # Limit to 5 tags
+                            }
+                    
+                    # Add Priority if it exists (select type)
+                    if 'Priority' in db_properties:
+                        properties["Priority"] = {
+                            "select": {
+                                "name": "Medium"
+                            }
+                        }
+                    
+                    # Add Description if it exists (rich_text type)
+                    if 'Description' in db_properties:
+                        # Extract first few lines as description
+                        lines = markdown_content.split('\n')[:3]
+                        description = ' '.join([line.strip() for line in lines if line.strip()])
+                        if len(description) > 200:
+                            description = description[:197] + "..."
+                        
+                        properties["Description"] = {
+                            "rich_text": [
+                                {
+                                    "text": {
+                                        "content": description
+                                    }
+                                }
+                            ]
+                        }
+                    
             except Exception as e:
                 # If we can't get the database schema, just use basic properties
+                print(f"Warning: Could not retrieve database schema: {e}")
                 pass
             
             # Create the page
@@ -168,17 +258,46 @@ class NotionIntegration:
             self.client.blocks.children.delete(page_id)
             self.client.blocks.children.append(page_id, children=blocks)
             
-            # Update the last modified date
-            self.client.pages.update(
-                page_id,
-                properties={
-                    "Last Modified": {
+            # Try to update the last modified date if the property exists
+            try:
+                # Get the page to check its properties
+                page_properties = self._get_page_properties(page_id)
+                
+                # Prepare properties to update
+                update_properties = {}
+                
+                # Add Last Modified if it exists
+                if 'Last Modified' in page_properties:
+                    update_properties["Last Modified"] = {
                         "date": {
                             "start": datetime.now().isoformat()
                         }
                     }
-                }
-            )
+                
+                # Add Modified Date if it exists
+                if 'Modified Date' in page_properties:
+                    update_properties["Modified Date"] = {
+                        "date": {
+                            "start": datetime.now().isoformat()
+                        }
+                    }
+                
+                # Add Updated At if it exists
+                if 'Updated At' in page_properties:
+                    update_properties["Updated At"] = {
+                        "date": {
+                            "start": datetime.now().isoformat()
+                        }
+                    }
+                
+                # Update properties if any exist
+                if update_properties:
+                    self.client.pages.update(page_id, properties=update_properties)
+                    
+            except Exception as e:
+                # If we can't update properties, just continue
+                print(f"Warning: Could not update page properties: {e}")
+                pass
             
             return True
             
@@ -197,7 +316,7 @@ class NotionIntegration:
             Page ID if found, None otherwise
         """
         try:
-            search_query = f"Release Notes - {release_version}"
+            search_query = f"Changelog - {release_version}"
             
             if database_id:
                 # Search in specific database
@@ -350,6 +469,40 @@ class NotionIntegration:
                     categories.append(category)
         
         return categories
+    
+    def _get_database_schema(self, database_id: str) -> dict:
+        """
+        Get the schema/properties of a database
+        
+        Args:
+            database_id: Notion database ID
+            
+        Returns:
+            Dictionary of database properties
+        """
+        try:
+            database = self.client.databases.retrieve(database_id=database_id)
+            return database.get('properties', {})
+        except Exception as e:
+            print(f"Warning: Could not retrieve database schema: {e}")
+            return {}
+    
+    def _get_page_properties(self, page_id: str) -> dict:
+        """
+        Get the properties of a page
+        
+        Args:
+            page_id: Notion page ID
+            
+        Returns:
+            Dictionary of page properties
+        """
+        try:
+            page = self.client.pages.retrieve(page_id)
+            return page.get('properties', {})
+        except Exception as e:
+            print(f"Warning: Could not retrieve page properties: {e}")
+            return {}
     
     def get_databases(self) -> List[Dict[str, Any]]:
         """
