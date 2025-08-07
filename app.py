@@ -399,9 +399,23 @@ def main():
     # Release Label generation only
     st.sidebar.subheader("Release Labels")
     
-    # Fetch and display release labels
-    with st.spinner("Fetching release labels..."):
-        release_labels = get_release_labels()
+    # Add refresh button for release labels
+    col1, col2 = st.sidebar.columns([3, 1])
+    with col1:
+        st.markdown("**Available Release Labels**")
+    with col2:
+        if st.button("🔄", help="Refresh release labels from Linear"):
+            # Clear cached labels and force refresh
+            if 'cached_release_labels' in st.session_state:
+                del st.session_state['cached_release_labels']
+            st.rerun()
+    
+    # Fetch and display release labels (with caching)
+    if 'cached_release_labels' not in st.session_state:
+        with st.spinner("Fetching release labels..."):
+            st.session_state['cached_release_labels'] = get_release_labels()
+    
+    release_labels = st.session_state['cached_release_labels']
     
     if release_labels:
         st.sidebar.success(f"Found {len(release_labels)} release labels")
@@ -415,20 +429,10 @@ def main():
             help="Select a release label from the 'Release' group to generate release notes"
         )
         
-        # Manual input option
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("**Or enter a custom label:**")
-        custom_label = st.sidebar.text_input(
-            "Custom Release Label",
-            placeholder="e.g., 106.5.0"
-        )
-        
         # Determine which label to use
         release_label = None
         if selected_label and selected_label != "Select a release label...":
             release_label = selected_label
-        elif custom_label:
-            release_label = custom_label
         
         # Show current status
         if st.session_state['current_release_label']:
@@ -445,7 +449,7 @@ def main():
         
         if st.sidebar.button("Generate Release Notes", type="primary", help="Generate release notes for the selected label"):
             if not release_label:
-                st.error("Please select a release label or enter a custom one.")
+                st.error("Please select a release label.")
                 return
             
             # Clear previous session state when generating new release notes
@@ -475,49 +479,7 @@ def main():
             else:
                 st.warning(f"No issues found with label '{release_label}'")
     else:
-        st.sidebar.warning("No release labels found. Please enter a custom label below.")
-        
-        # Manual input option
-        custom_label = st.sidebar.text_input(
-            "Release Label",
-            placeholder="e.g., 106.5.0"
-        )
-        
-        # Show current status
-        if st.session_state['current_release_label']:
-            st.sidebar.info(f"🎯 **Current:** {st.session_state['current_release_label']}")
-        
-        if st.sidebar.button("Generate Release Notes", type="primary"):
-            if not custom_label:
-                st.error("Please enter a release label.")
-                return
-            
-            # Clear previous session state when generating new release notes
-            if 'release_notes' in st.session_state:
-                del st.session_state['release_notes']
-            if 'release_version' in st.session_state:
-                del st.session_state['release_version']
-            
-            with st.spinner("Fetching issues..."):
-                issues = get_issues_by_label(custom_label)
-            
-            if issues:
-                st.success(f"Found {len(issues)} issues for release {custom_label}")
-                
-                # Generate and display release notes
-                release_notes = generate_release_notes(issues, custom_label)
-                
-                # Store in session state for persistence
-                st.session_state['release_notes'] = release_notes
-                st.session_state['release_version'] = custom_label
-                st.session_state['current_release_label'] = custom_label
-                
-                st.success(f"✅ Release notes generated for **{custom_label}**! Check the main content area above.")
-                
-                # Force a rerun to display the new content
-                st.rerun()
-            else:
-                st.warning(f"No issues found with label '{custom_label}'")
+        st.sidebar.warning("No release labels found. Please check your Linear configuration.")
     
     # Display recent activity
     st.sidebar.header("Recent Activity")
@@ -528,28 +490,23 @@ def main():
         st.sidebar.header("📝 Notion Integration")
         
         if is_notion_configured():
-            try:
-                notion = NotionIntegration()
-                st.sidebar.success("✅ Notion connected")
-                
-                # Get available databases
-                databases = notion.get_databases()
-                if databases:
-                    st.sidebar.subheader("Available Databases")
-                    database_options = {db.get('title', [{}])[0].get('plain_text', 'Untitled'): db['id'] for db in databases}
-                    selected_database = st.sidebar.selectbox(
-                        "Select Database",
-                        ["Choose database..."] + list(database_options.keys())
-                    )
-                    
-                    if selected_database and selected_database != "Choose database...":
-                        st.session_state['selected_database_id'] = database_options[selected_database]
-                else:
-                    st.sidebar.info("No databases found. Make sure to share your databases with the integration.")
-                
-            except Exception as e:
-                st.sidebar.error(f"❌ Notion connection failed: {str(e)}")
-                st.sidebar.error("Please check your NOTION_TOKEN and ensure the integration has proper permissions.")
+            # Automatically set the database ID if available
+            if 'selected_database_id' not in st.session_state:
+                try:
+                    notion = NotionIntegration()
+                    databases = notion.get_databases()
+                    if databases:
+                        # Look for the "Changelog" database
+                        for db in databases:
+                            title = db.get('title', [{}])[0].get('plain_text', '')
+                            if 'changelog' in title.lower():
+                                st.session_state['selected_database_id'] = db['id']
+                                break
+                        # If no "Changelog" database found, use the first one
+                        if 'selected_database_id' not in st.session_state and databases:
+                            st.session_state['selected_database_id'] = databases[0]['id']
+                except Exception as e:
+                    st.sidebar.error(f"❌ Notion connection failed: {str(e)}")
         else:
             st.sidebar.warning("⚠️ Notion not configured")
             
