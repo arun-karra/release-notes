@@ -308,9 +308,16 @@ def check_password():
         # Then try Streamlit secrets
         try:
             if hasattr(st, 'secrets') and st.secrets:
+                # Try APP_PASSWORD first (for consistency)
+                password = st.secrets.get('APP_PASSWORD')
+                if password:
+                    st.write(f"🔍 Password source: Streamlit secrets (APP_PASSWORD)")
+                    return password
+                
+                # Fallback to 'password' for backward compatibility
                 password = st.secrets.get('password')
                 if password:
-                    st.write(f"🔍 Password source: Streamlit secrets (password)")
+                    st.write(f"🔍 Password source: Streamlit secrets (password) - DEPRECATED")
                     return password
         except:
             pass
