@@ -11,6 +11,9 @@ A modern, web-based release notes generator that pulls data from Linear and prov
 - **🎨 Modern UI**: Clean, responsive interface with real-time updates
 - **📥 Download Support**: Export release notes as Markdown files
 - **🔍 Smart Filtering**: Automatic categorization and domain area detection
+- **📝 Notion Integration**: Sync release notes directly to Notion pages and databases
+- **🔄 Update Existing Pages**: Update existing Notion pages with new release notes
+- **🏷️ Automatic Categorization**: Extract and tag categories in Notion
 
 ## 🚀 Quick Start
 
@@ -150,6 +153,37 @@ Generated release notes include:
 |----------|-------------|----------|
 | `LINEAR_API_KEY` | Your Linear API key | Yes |
 | `LINEAR_WORKSPACE_URL` | Your Linear workspace URL | No (defaults to placeholder) |
+| `NOTION_TOKEN` | Your Notion integration token | No (for Notion sync) |
+| `NOTION_DATABASE_ID` | Your Notion database ID | No (optional) |
+| `NOTION_PARENT_PAGE_ID` | Your Notion parent page ID | No (optional) |
+
+### Notion Integration Setup
+
+To enable Notion integration for syncing release notes:
+
+1. **Create a Notion Integration**:
+   - Go to [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+   - Click "New integration"
+   - Give it a name (e.g., "Release Notes Generator")
+   - Select the workspace you want to integrate with
+   - Copy the "Internal Integration Token"
+
+2. **Configure Environment Variables**:
+   ```env
+   NOTION_TOKEN=your_notion_integration_token_here
+   NOTION_DATABASE_ID=your_database_id_here (optional)
+   NOTION_PARENT_PAGE_ID=your_parent_page_id_here (optional)
+   ```
+
+3. **Share Your Notion Pages/Databases**:
+   - Go to the Notion page or database where you want to create release notes
+   - Click "Share" → "Invite" → Add your integration
+   - Give it "Edit" permissions
+
+4. **Test the Integration**:
+   ```bash
+   python test_notion.py
+   ```
 
 ### Customization
 

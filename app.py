@@ -7,6 +7,13 @@ import time
 from dotenv import load_dotenv
 import re
 
+# Import Notion integration
+try:
+    from notion_integration import NotionIntegration
+    NOTION_AVAILABLE = True
+except ImportError:
+    NOTION_AVAILABLE = False
+
 # Load environment variables
 load_dotenv()
 
@@ -372,6 +379,49 @@ def main():
                         file_name=f"changelog-{release_label}.md",
                         mime="text/markdown"
                     )
+                    
+                    # Notion Integration
+                    if NOTION_AVAILABLE and os.getenv('NOTION_TOKEN'):
+                        st.subheader("📝 Sync to Notion")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("Create New Notion Page", type="secondary"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Creating Notion page..."):
+                                        page_id = notion.create_release_notes_page(
+                                            release_version=release_label,
+                                            markdown_content=release_notes,
+                                            database_id=database_id
+                                        )
+                                    
+                                    st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Failed to create Notion page: {str(e)}")
+                        
+                        with col2:
+                            if st.button("Update Existing Page", type="secondary"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Searching for existing page..."):
+                                        existing_page_id = notion.find_existing_page(release_label, database_id)
+                                    
+                                    if existing_page_id:
+                                        with st.spinner("Updating Notion page..."):
+                                            notion.update_existing_page(existing_page_id, release_notes)
+                                        st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
+                                    else:
+                                        st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Failed to update Notion page: {str(e)}")
                 else:
                     st.warning(f"No issues found with label '{release_label}'")
         else:
@@ -408,6 +458,49 @@ def main():
                         file_name=f"changelog-{custom_label}.md",
                         mime="text/markdown"
                     )
+                    
+                    # Notion Integration
+                    if NOTION_AVAILABLE and os.getenv('NOTION_TOKEN'):
+                        st.subheader("📝 Sync to Notion")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("Create New Notion Page", type="secondary"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Creating Notion page..."):
+                                        page_id = notion.create_release_notes_page(
+                                            release_version=custom_label,
+                                            markdown_content=release_notes,
+                                            database_id=database_id
+                                        )
+                                    
+                                    st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Failed to create Notion page: {str(e)}")
+                        
+                        with col2:
+                            if st.button("Update Existing Page", type="secondary"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Searching for existing page..."):
+                                        existing_page_id = notion.find_existing_page(custom_label, database_id)
+                                    
+                                    if existing_page_id:
+                                        with st.spinner("Updating Notion page..."):
+                                            notion.update_existing_page(existing_page_id, release_notes)
+                                        st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
+                                    else:
+                                        st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Failed to update Notion page: {str(e)}")
                 else:
                     st.warning(f"No issues found with label '{custom_label}'")
     
@@ -446,6 +539,49 @@ def main():
                             file_name=f"changelog-view-{selected_view_name.replace(' ', '-')}.md",
                             mime="text/markdown"
                         )
+                        
+                        # Notion Integration
+                        if NOTION_AVAILABLE and os.getenv('NOTION_TOKEN'):
+                            st.subheader("📝 Sync to Notion")
+                            
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                if st.button("Create New Notion Page", type="secondary"):
+                                    try:
+                                        notion = NotionIntegration()
+                                        database_id = st.session_state.get('selected_database_id')
+                                        
+                                        with st.spinner("Creating Notion page..."):
+                                            page_id = notion.create_release_notes_page(
+                                                release_version=f"View: {selected_view_name}",
+                                                markdown_content=release_notes,
+                                                database_id=database_id
+                                            )
+                                        
+                                        st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
+                                        
+                                    except Exception as e:
+                                        st.error(f"❌ Failed to create Notion page: {str(e)}")
+                            
+                            with col2:
+                                if st.button("Update Existing Page", type="secondary"):
+                                    try:
+                                        notion = NotionIntegration()
+                                        database_id = st.session_state.get('selected_database_id')
+                                        
+                                        with st.spinner("Searching for existing page..."):
+                                            existing_page_id = notion.find_existing_page(f"View: {selected_view_name}", database_id)
+                                        
+                                        if existing_page_id:
+                                            with st.spinner("Updating Notion page..."):
+                                                notion.update_existing_page(existing_page_id, release_notes)
+                                            st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
+                                        else:
+                                            st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                                            
+                                    except Exception as e:
+                                        st.error(f"❌ Failed to update Notion page: {str(e)}")
                     else:
                         st.warning(f"No issues found in view '{selected_view_name}'")
         else:
@@ -454,6 +590,46 @@ def main():
     # Display recent activity
     st.sidebar.header("Recent Activity")
     st.sidebar.info("Last updated: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    
+    # Notion Integration Section
+    if NOTION_AVAILABLE:
+        st.sidebar.header("📝 Notion Integration")
+        
+        # Check if Notion is configured
+        notion_token = os.getenv('NOTION_TOKEN')
+        if notion_token:
+            try:
+                notion = NotionIntegration()
+                st.sidebar.success("✅ Notion connected")
+                
+                # Get available databases
+                databases = notion.get_databases()
+                if databases:
+                    st.sidebar.subheader("Available Databases")
+                    database_options = {db.get('title', [{}])[0].get('plain_text', 'Untitled'): db['id'] for db in databases}
+                    selected_database = st.sidebar.selectbox(
+                        "Select Database",
+                        ["Choose database..."] + list(database_options.keys())
+                    )
+                    
+                    if selected_database and selected_database != "Choose database...":
+                        st.session_state['selected_database_id'] = database_options[selected_database]
+                
+            except Exception as e:
+                st.sidebar.error(f"❌ Notion connection failed: {str(e)}")
+        else:
+            st.sidebar.warning("⚠️ Notion not configured")
+            st.sidebar.markdown("""
+            To enable Notion integration, add to your `.env` file:
+            ```
+            NOTION_TOKEN=your_notion_integration_token
+            NOTION_DATABASE_ID=your_database_id (optional)
+            NOTION_PARENT_PAGE_ID=your_parent_page_id (optional)
+            ```
+            """)
+    else:
+        st.sidebar.header("📝 Notion Integration")
+        st.sidebar.info("Install notion-client to enable Notion integration")
     
     # Footer
     st.markdown("---")
