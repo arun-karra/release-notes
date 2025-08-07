@@ -1,0 +1,13 @@
+# Add these lines to your .env file:
+
+# Notion Integration Configuration
+# Get your integration token from: https://www.notion.so/my-integrations
+NOTION_TOKEN=your_notion_integration_token_here
+
+# Optional: Notion Database ID (if you want to create pages in a specific database)
+# You can find this in the URL when viewing your database: https://notion.so/your-workspace/DATABASE_ID
+NOTION_DATABASE_ID=your_notion_database_id_here
+
+# Optional: Notion Parent Page ID (if you want to create pages as children of a specific page)
+# You can find this in the URL when viewing your page: https://notion.so/your-workspace/PAGE_ID
+NOTION_PARENT_PAGE_ID=your_notion_parent_page_id_here
