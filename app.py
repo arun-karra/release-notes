@@ -328,7 +328,18 @@ def check_password():
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
+        
+        # Create a container for better styling
+        with st.container():
+            password_input = st.text_input(
+                "Password", 
+                type="password", 
+                on_change=password_entered, 
+                key="password",
+                help="You can paste your password here using Ctrl+V (Windows/Linux) or Cmd+V (Mac)"
+            )
+            st.markdown("💡 **Tip**: You can paste your password using **Ctrl+V** (Windows/Linux) or **Cmd+V** (Mac)")
+        
         st.markdown("---")
         return False
     elif not st.session_state["password_correct"]:
@@ -336,8 +347,19 @@ def check_password():
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Password incorrect. Please try again.")
+        
+        # Create a container for better styling
+        with st.container():
+            password_input = st.text_input(
+                "Password", 
+                type="password", 
+                on_change=password_entered, 
+                key="password",
+                help="You can paste your password here using Ctrl+V (Windows/Linux) or Cmd+V (Mac)"
+            )
+            st.error("😕 Password incorrect. Please try again.")
+            st.markdown("💡 **Tip**: You can paste your password using **Ctrl+V** (Windows/Linux) or **Cmd+V** (Mac)")
+        
         st.markdown("---")
         return False
     else:
