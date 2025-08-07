@@ -17,14 +17,32 @@ load_dotenv()
 class NotionIntegration:
     def __init__(self):
         """Initialize Notion client"""
-        self.notion_token = os.getenv('NOTION_TOKEN')
-        self.database_id = os.getenv('NOTION_DATABASE_ID')
-        self.parent_page_id = os.getenv('NOTION_PARENT_PAGE_ID')
+        # Try to get token from environment variables or Streamlit secrets
+        self.notion_token = self._get_env_var('NOTION_TOKEN')
+        self.database_id = self._get_env_var('NOTION_DATABASE_ID')
+        self.parent_page_id = self._get_env_var('NOTION_PARENT_PAGE_ID')
         
         if not self.notion_token:
-            raise ValueError("NOTION_TOKEN not found in environment variables")
+            raise ValueError("NOTION_TOKEN not found in environment variables or Streamlit secrets")
         
         self.client = Client(auth=self.notion_token)
+    
+    def _get_env_var(self, var_name):
+        """Get environment variable, checking both os.environ and st.secrets"""
+        # First try to get from environment variables (local development)
+        value = os.getenv(var_name)
+        if value:
+            return value
+        
+        # If not found, try to get from Streamlit secrets (cloud deployment)
+        try:
+            import streamlit as st
+            if hasattr(st, 'secrets') and st.secrets:
+                return st.secrets.get(var_name)
+        except:
+            pass
+        
+        return None
     
     def create_release_notes_page(self, release_version: str, markdown_content: str, 
                                  database_id: Optional[str] = None) -> str:

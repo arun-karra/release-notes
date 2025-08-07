@@ -17,6 +17,23 @@ except ImportError:
 # Load environment variables
 load_dotenv()
 
+# Helper function to get environment variables (works for both local and Streamlit Cloud)
+def get_env_var(var_name):
+    """Get environment variable, checking both os.environ and st.secrets"""
+    # First try to get from environment variables (local development)
+    value = os.getenv(var_name)
+    if value:
+        return value
+    
+    # If not found, try to get from Streamlit secrets (cloud deployment)
+    try:
+        if hasattr(st, 'secrets') and st.secrets:
+            return st.secrets.get(var_name)
+    except:
+        pass
+    
+    return None
+
 # Configuration
 LINEAR_API_KEY = os.getenv('LINEAR_API_KEY')
 LINEAR_API_URL = 'https://api.linear.app/graphql'
@@ -315,7 +332,7 @@ def main():
                 )
                 
                 # Notion Integration
-                if NOTION_AVAILABLE and os.getenv('NOTION_TOKEN'):
+                if NOTION_AVAILABLE and get_env_var('NOTION_TOKEN'):
                     st.subheader("📝 Sync to Notion")
                     
                     col1, col2 = st.columns(2)
@@ -394,7 +411,7 @@ def main():
                 )
                 
                 # Notion Integration
-                if NOTION_AVAILABLE and os.getenv('NOTION_TOKEN'):
+                if NOTION_AVAILABLE and get_env_var('NOTION_TOKEN'):
                     st.subheader("📝 Sync to Notion")
                     
                     col1, col2 = st.columns(2)
@@ -447,7 +464,7 @@ def main():
         st.sidebar.header("📝 Notion Integration")
         
         # Check if Notion is configured
-        notion_token = os.getenv('NOTION_TOKEN')
+        notion_token = get_env_var('NOTION_TOKEN')
         if notion_token:
             try:
                 notion = NotionIntegration()
@@ -465,13 +482,16 @@ def main():
                     
                     if selected_database and selected_database != "Choose database...":
                         st.session_state['selected_database_id'] = database_options[selected_database]
+                else:
+                    st.sidebar.info("No databases found. Make sure to share your databases with the integration.")
                 
             except Exception as e:
                 st.sidebar.error(f"❌ Notion connection failed: {str(e)}")
+                st.sidebar.error("Please check your NOTION_TOKEN and ensure the integration has proper permissions.")
         else:
             st.sidebar.warning("⚠️ Notion not configured")
             st.sidebar.markdown("""
-            To enable Notion integration, add to your `.env` file:
+            To enable Notion integration, add to your `.env` file (local) or Streamlit secrets (cloud):
             ```
             NOTION_TOKEN=your_notion_integration_token
             NOTION_DATABASE_ID=your_database_id (optional)
