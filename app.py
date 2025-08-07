@@ -361,6 +361,10 @@ def main():
                 # Generate and display release notes
                 release_notes = generate_release_notes(issues, release_label)
                 
+                # Store in session state for persistence
+                st.session_state['release_notes'] = release_notes
+                st.session_state['release_version'] = release_label
+                
                 # Display the markdown
                 st.subheader("Generated Release Notes")
                 st.markdown(release_notes)
@@ -378,54 +382,63 @@ def main():
                     st.subheader("📝 Sync to Notion")
                     st.info("Notion is configured and ready!")
                     
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        if st.button("Create New Notion Page", type="secondary", key="create_notion_page"):
-                            st.write("Button clicked! Starting Notion page creation...")
-                            try:
-                                notion = NotionIntegration()
-                                database_id = st.session_state.get('selected_database_id')
-                                
-                                # Debug information
-                                st.info(f"Debug: database_id = {database_id}")
-                                st.info(f"Debug: release_version = {release_label}")
-                                st.info(f"Debug: content length = {len(release_notes)} characters")
-                                
-                                with st.spinner("Creating Notion page..."):
-                                    page_id = notion.create_release_notes_page(
-                                        release_version=release_label,
-                                        markdown_content=release_notes,
-                                        database_id=database_id
-                                    )
-                                
-                                st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
-                                
-                            except Exception as e:
-                                st.error(f"❌ Failed to create Notion page: {str(e)}")
-                                # Add more detailed error information
-                                st.error(f"Error details: {type(e).__name__}: {str(e)}")
-                                import traceback
-                                st.error(f"Traceback: {traceback.format_exc()}")
-                    
-                    with col2:
-                        if st.button("Update Existing Page", type="secondary"):
-                            try:
-                                notion = NotionIntegration()
-                                database_id = st.session_state.get('selected_database_id')
-                                
-                                with st.spinner("Searching for existing page..."):
-                                    existing_page_id = notion.find_existing_page(release_label, database_id)
-                                
-                                if existing_page_id:
-                                    with st.spinner("Updating Notion page..."):
-                                        notion.update_existing_page(existing_page_id, release_notes)
-                                    st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
-                                else:
-                                    st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                    # Check if we have release notes in session state
+                    if 'release_notes' in st.session_state and 'release_version' in st.session_state:
+                        release_notes = st.session_state['release_notes']
+                        release_version = st.session_state['release_version']
+                        
+                        st.info(f"Ready to sync release notes for version: {release_version}")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("Create New Notion Page", type="secondary", key="create_notion_page_custom"):
+                                st.write("Button clicked! Starting Notion page creation...")
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
                                     
-                            except Exception as e:
-                                st.error(f"❌ Failed to update Notion page: {str(e)}")
+                                    # Debug information
+                                    st.info(f"Debug: database_id = {database_id}")
+                                    st.info(f"Debug: release_version = {release_version}")
+                                    st.info(f"Debug: content length = {len(release_notes)} characters")
+                                    
+                                    with st.spinner("Creating Notion page..."):
+                                        page_id = notion.create_release_notes_page(
+                                            release_version=release_version,
+                                            markdown_content=release_notes,
+                                            database_id=database_id
+                                        )
+                                    
+                                    st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Failed to create Notion page: {str(e)}")
+                                    # Add more detailed error information
+                                    st.error(f"Error details: {type(e).__name__}: {str(e)}")
+                                    import traceback
+                                    st.error(f"Traceback: {traceback.format_exc()}")
+                        
+                        with col2:
+                            if st.button("Update Existing Page", type="secondary", key="update_notion_page_custom"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Searching for existing page..."):
+                                        existing_page_id = notion.find_existing_page(release_version, database_id)
+                                    
+                                    if existing_page_id:
+                                        with st.spinner("Updating Notion page..."):
+                                            notion.update_existing_page(existing_page_id, release_notes)
+                                        st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
+                                    else:
+                                        st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Failed to update Notion page: {str(e)}")
+                    else:
+                        st.warning("No release notes generated yet. Please generate release notes first.")
             else:
                 st.warning(f"No issues found with label '{release_label}'")
     else:
@@ -451,6 +464,10 @@ def main():
                 # Generate and display release notes
                 release_notes = generate_release_notes(issues, custom_label)
                 
+                # Store in session state for persistence
+                st.session_state['release_notes'] = release_notes
+                st.session_state['release_version'] = custom_label
+                
                 # Display the markdown
                 st.subheader("Generated Release Notes")
                 st.markdown(release_notes)
@@ -468,54 +485,63 @@ def main():
                     st.subheader("📝 Sync to Notion")
                     st.info("Notion is configured and ready!")
                     
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        if st.button("Create New Notion Page", type="secondary", key="create_notion_page_custom"):
-                            st.write("Button clicked! Starting Notion page creation...")
-                            try:
-                                notion = NotionIntegration()
-                                database_id = st.session_state.get('selected_database_id')
-                                
-                                # Debug information
-                                st.info(f"Debug: database_id = {database_id}")
-                                st.info(f"Debug: release_version = {custom_label}")
-                                st.info(f"Debug: content length = {len(release_notes)} characters")
-                                
-                                with st.spinner("Creating Notion page..."):
-                                    page_id = notion.create_release_notes_page(
-                                        release_version=custom_label,
-                                        markdown_content=release_notes,
-                                        database_id=database_id
-                                    )
-                                
-                                st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
-                                
-                            except Exception as e:
-                                st.error(f"❌ Failed to create Notion page: {str(e)}")
-                                # Add more detailed error information
-                                st.error(f"Error details: {type(e).__name__}: {str(e)}")
-                                import traceback
-                                st.error(f"Traceback: {traceback.format_exc()}")
-                    
-                    with col2:
-                        if st.button("Update Existing Page", type="secondary"):
-                            try:
-                                notion = NotionIntegration()
-                                database_id = st.session_state.get('selected_database_id')
-                                
-                                with st.spinner("Searching for existing page..."):
-                                    existing_page_id = notion.find_existing_page(custom_label, database_id)
-                                
-                                if existing_page_id:
-                                    with st.spinner("Updating Notion page..."):
-                                        notion.update_existing_page(existing_page_id, release_notes)
-                                    st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
-                                else:
-                                    st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                    # Check if we have release notes in session state
+                    if 'release_notes' in st.session_state and 'release_version' in st.session_state:
+                        release_notes = st.session_state['release_notes']
+                        release_version = st.session_state['release_version']
+                        
+                        st.info(f"Ready to sync release notes for version: {release_version}")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            if st.button("Create New Notion Page", type="secondary", key="create_notion_page_custom"):
+                                st.write("Button clicked! Starting Notion page creation...")
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
                                     
-                            except Exception as e:
-                                st.error(f"❌ Failed to update Notion page: {str(e)}")
+                                    # Debug information
+                                    st.info(f"Debug: database_id = {database_id}")
+                                    st.info(f"Debug: release_version = {release_version}")
+                                    st.info(f"Debug: content length = {len(release_notes)} characters")
+                                    
+                                    with st.spinner("Creating Notion page..."):
+                                        page_id = notion.create_release_notes_page(
+                                            release_version=release_version,
+                                            markdown_content=release_notes,
+                                            database_id=database_id
+                                        )
+                                    
+                                    st.success(f"✅ Created Notion page! [View Page](https://notion.so/{page_id.replace('-', '')})")
+                                    
+                                except Exception as e:
+                                    st.error(f"❌ Failed to create Notion page: {str(e)}")
+                                    # Add more detailed error information
+                                    st.error(f"Error details: {type(e).__name__}: {str(e)}")
+                                    import traceback
+                                    st.error(f"Traceback: {traceback.format_exc()}")
+                        
+                        with col2:
+                            if st.button("Update Existing Page", type="secondary", key="update_notion_page_custom"):
+                                try:
+                                    notion = NotionIntegration()
+                                    database_id = st.session_state.get('selected_database_id')
+                                    
+                                    with st.spinner("Searching for existing page..."):
+                                        existing_page_id = notion.find_existing_page(release_version, database_id)
+                                    
+                                    if existing_page_id:
+                                        with st.spinner("Updating Notion page..."):
+                                            notion.update_existing_page(existing_page_id, release_notes)
+                                        st.success(f"✅ Updated existing Notion page! [View Page](https://notion.so/{existing_page_id.replace('-', '')})")
+                                    else:
+                                        st.warning("No existing page found for this release. Use 'Create New Notion Page' instead.")
+                                        
+                                except Exception as e:
+                                    st.error(f"❌ Failed to update Notion page: {str(e)}")
+                    else:
+                        st.warning("No release notes generated yet. Please generate release notes first.")
             else:
                 st.warning(f"No issues found with label '{custom_label}'")
     
