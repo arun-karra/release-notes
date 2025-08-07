@@ -90,10 +90,14 @@ def get_recent_releases():
     """Get recent release labels (last 30 days)"""
     query = """
     query {
-        labels(first: 100) {
-            nodes {
-                name
-                createdAt
+        viewer {
+            organization {
+                labels {
+                    nodes {
+                        name
+                        createdAt
+                    }
+                }
             }
         }
     }
@@ -104,7 +108,7 @@ def get_recent_releases():
         logging.error(f"Error fetching labels: {result['errors']}")
         return []
     
-    labels = result.get('data', {}).get('labels', {}).get('nodes', [])
+    labels = result.get('data', {}).get('viewer', {}).get('organization', {}).get('labels', {}).get('nodes', [])
     
     # Filter for release labels (assuming they follow a version pattern like X.Y.Z)
     import re

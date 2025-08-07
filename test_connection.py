@@ -157,11 +157,10 @@ def test_views_access():
     query {
         viewer {
             organization {
-                views {
+                teams {
                     nodes {
                         id
                         name
-                        type
                     }
                 }
             }
@@ -183,21 +182,21 @@ def test_views_access():
             print(f"❌ Views access error: {data['errors']}")
             return False
         
-        views = data.get('data', {}).get('viewer', {}).get('organization', {}).get('views', {}).get('nodes', [])
-        if views:
-            print(f"✅ Views access successful!")
-            print(f"   Views found: {len(views)}")
-            for view in views[:5]:  # Show first 5 views
-                print(f"     - {view.get('name', 'Unknown')} ({view.get('type', 'Unknown')})")
-            if len(views) > 5:
-                print(f"     ... and {len(views) - 5} more")
+        teams = data.get('data', {}).get('viewer', {}).get('organization', {}).get('teams', {}).get('nodes', [])
+        if teams:
+            print(f"✅ Teams access successful!")
+            print(f"   Teams found: {len(teams)}")
+            for team in teams[:5]:  # Show first 5 teams
+                print(f"     - {team.get('name', 'Unknown')}")
+            if len(teams) > 5:
+                print(f"     ... and {len(teams) - 5} more")
             return True
         else:
-            print("⚠️  No views found")
+            print("⚠️  No teams found")
             return True
             
     except requests.exceptions.RequestException as e:
-        print(f"❌ Views access failed: {e}")
+        print(f"❌ Teams access failed: {e}")
         return False
 
 def main():

@@ -74,12 +74,17 @@ def get_views():
     query {
         viewer {
             organization {
-                views {
+                teams {
                     nodes {
                         id
                         name
-                        description
-                        type
+                        cycles {
+                            nodes {
+                                id
+                                name
+                                number
+                            }
+                        }
                     }
                 }
             }
@@ -92,7 +97,19 @@ def get_views():
         st.error(f"Error fetching views: {result['errors']}")
         return []
     
-    return result.get('data', {}).get('viewer', {}).get('organization', {}).get('views', {}).get('nodes', [])
+    # For now, we'll return teams as "views" since Linear's view structure is different
+    teams = result.get('data', {}).get('viewer', {}).get('organization', {}).get('teams', {}).get('nodes', [])
+    
+    # Convert teams to a view-like structure
+    views = []
+    for team in teams:
+        views.append({
+            'id': team['id'],
+            'name': f"Team: {team['name']}",
+            'type': 'team'
+        })
+    
+    return views
 
 def get_issues_by_label(release_label):
     """Fetch issues by release label"""
@@ -161,11 +178,15 @@ def get_release_labels():
     """Fetch all release labels from Linear"""
     query = """
     query {
-        labels(first: 100) {
-            nodes {
-                name
-                createdAt
-                description
+        viewer {
+            organization {
+                labels {
+                    nodes {
+                        name
+                        createdAt
+                        description
+                    }
+                }
             }
         }
     }
@@ -176,9 +197,10 @@ def get_release_labels():
         st.error(f"Error fetching labels: {result['errors']}")
         return []
     
-    labels = result.get('data', {}).get('labels', {}).get('nodes', [])
+    labels = result.get('data', {}).get('viewer', {}).get('organization', {}).get('labels', {}).get('nodes', [])
     
     # Filter for release labels (assuming they follow a version pattern like X.Y.Z)
+    import re
     release_pattern = re.compile(r'^\d+\.\d+\.\d+$')
     release_labels = [label for label in labels if release_pattern.match(label['name'])]
     
