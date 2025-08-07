@@ -1,0 +1,55 @@
+name: Deploy Release Notes Generator
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Generate release notes (scheduled runs)
+      if: github.event_name == 'schedule'
+      env:
+        LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        LINEAR_WORKSPACE_URL: ${{ secrets.LINEAR_WORKSPACE_URL }}
+      run: |
+        python scheduler.py --run-once
+        
+    - name: Deploy to Streamlit Cloud
+      if: github.event_name == 'push'
+      env:
+        STREAMLIT_SHARING_TOKEN: ${{ secrets.STREAMLIT_SHARING_TOKEN }}
+      run: |
+        # This would typically deploy to Streamlit Cloud
+        # For now, we'll just create a deployment marker
+        echo "Deployment to Streamlit Cloud would happen here"
+        echo "Deployment completed at $(date)" > deployment.log
+        
+    - name: Commit and push changes (scheduled runs)
+      if: github.event_name == 'schedule'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add releases/ || true
+        git add deployment.log || true
+        git commit -m "Auto-update release notes $(date)" || true
+        git push || true
