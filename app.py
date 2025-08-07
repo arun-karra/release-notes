@@ -331,6 +331,22 @@ def check_password():
         else:
             st.session_state["password_correct"] = False
 
+    # Check if we need to force re-authentication (for password changes)
+    current_password = get_password()
+    stored_password_hash = st.session_state.get("password_hash", None)
+    
+    # Create a simple hash of the current password for comparison
+    import hashlib
+    current_password_hash = hashlib.md5(current_password.encode()).hexdigest()
+    
+    # If password has changed, clear the session state
+    if stored_password_hash and stored_password_hash != current_password_hash:
+        st.session_state.clear()
+        st.rerun()
+    
+    # Store the current password hash
+    st.session_state["password_hash"] = current_password_hash
+
     # First run, show inputs for password.
     if "password_correct" not in st.session_state:
         st.markdown("---")
@@ -340,6 +356,11 @@ def check_password():
         # Debug checkbox (only show in development)
         if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
             st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
+            
+            # Add a clear session button for debugging
+            if st.button("🗑️ Clear Session (Debug)", type="secondary"):
+                st.session_state.clear()
+                st.rerun()
         
         # Create a container for better styling
         with st.container():
@@ -363,6 +384,11 @@ def check_password():
         # Debug checkbox (only show in development)
         if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
             st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
+            
+            # Add a clear session button for debugging
+            if st.button("🗑️ Clear Session (Debug)", type="secondary"):
+                st.session_state.clear()
+                st.rerun()
         
         # Create a container for better styling
         with st.container():
