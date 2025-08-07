@@ -302,45 +302,30 @@ def check_password():
         # First try environment variable
         password = os.getenv('APP_PASSWORD')
         if password:
-            st.write(f"🔍 Password source: .env file (APP_PASSWORD)")
             return password
         
         # Then try Streamlit secrets
         try:
             if hasattr(st, 'secrets') and st.secrets:
-                st.write(f"🔍 Available Streamlit secrets keys: {list(st.secrets.keys())}")
-                
                 # Try 'password' first (this is what you have in Streamlit)
                 password = st.secrets.get('password')
                 if password:
-                    st.write(f"🔍 Password source: Streamlit secrets (password) - Value: {password[:3]}...")
                     return password
                 
                 # Fallback to APP_PASSWORD for consistency
                 password = st.secrets.get('APP_PASSWORD')
                 if password:
-                    st.write(f"🔍 Password source: Streamlit secrets (APP_PASSWORD) - Value: {password[:3]}...")
                     return password
         except Exception as e:
-            st.write(f"🔍 Error reading Streamlit secrets: {e}")
             pass
         
         # Default password if none set (for development)
-        st.write(f"🔍 Password source: Default (changeme123)")
         return "changeme123"
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
         correct_password = get_password()
         user_password = st.session_state.get("password", "")
-        
-        # Always show debug information for troubleshooting
-        st.write(f"🔍 **Debug Info:**")
-        st.write(f"- User entered password length: {len(user_password)}")
-        st.write(f"- Expected password length: {len(correct_password) if correct_password else 0}")
-        st.write(f"- Passwords match: {user_password == correct_password}")
-        st.write(f"- User password (first 3 chars): {user_password[:3] if user_password else 'None'}...")
-        st.write(f"- Expected password (first 3 chars): {correct_password[:3] if correct_password else 'None'}...")
         
         if user_password == correct_password:
             st.session_state["password_correct"] = True
@@ -358,32 +343,17 @@ def check_password():
     
     # If password has changed, clear the session state
     if stored_password_hash and stored_password_hash != current_password_hash:
-        st.write("🔍 Password changed detected - clearing session...")
         st.session_state.clear()
         st.rerun()
     
     # Store the current password hash
     st.session_state["password_hash"] = current_password_hash
     
-    # Add a manual refresh button for debugging
-    if st.sidebar.button("🔄 Clear Session & Refresh", type="secondary"):
-        st.session_state.clear()
-        st.rerun()
-
     # First run, show inputs for password.
     if "password_correct" not in st.session_state:
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
-        
-        # Debug checkbox (only show in development)
-        if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
-            st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
-            
-            # Add a clear session button for debugging
-            if st.button("🗑️ Clear Session (Debug)", type="secondary"):
-                st.session_state.clear()
-                st.rerun()
         
         # Create a container for better styling
         with st.container():
@@ -403,15 +373,6 @@ def check_password():
         st.markdown("---")
         st.markdown("## 🔐 Authentication Required")
         st.markdown("Please enter the password to access the Linear Release Notes Generator.")
-        
-        # Debug checkbox (only show in development)
-        if os.getenv('DEBUG_PASSWORD') or st.secrets.get('debug_password', False):
-            st.session_state["debug_password"] = st.checkbox("🔍 Debug password (development only)")
-            
-            # Add a clear session button for debugging
-            if st.button("🗑️ Clear Session (Debug)", type="secondary"):
-                st.session_state.clear()
-                st.rerun()
         
         # Create a container for better styling
         with st.container():
