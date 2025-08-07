@@ -302,16 +302,21 @@ def check_password():
         # First try environment variable
         password = os.getenv('APP_PASSWORD')
         if password:
+            st.write(f"🔍 Password source: .env file (APP_PASSWORD)")
             return password
         
         # Then try Streamlit secrets
         try:
             if hasattr(st, 'secrets') and st.secrets:
-                return st.secrets.get('password')
+                password = st.secrets.get('password')
+                if password:
+                    st.write(f"🔍 Password source: Streamlit secrets (password)")
+                    return password
         except:
             pass
         
         # Default password if none set (for development)
+        st.write(f"🔍 Password source: Default (changeme123)")
         return "changeme123"
 
     def password_entered():
@@ -319,11 +324,13 @@ def check_password():
         correct_password = get_password()
         user_password = st.session_state.get("password", "")
         
-        # Debug information (only show if debug mode is enabled)
-        if st.session_state.get("debug_password", False):
-            st.write(f"Debug: User entered password length: {len(user_password)}")
-            st.write(f"Debug: Expected password length: {len(correct_password) if correct_password else 0}")
-            st.write(f"Debug: Passwords match: {user_password == correct_password}")
+        # Always show debug information for troubleshooting
+        st.write(f"🔍 **Debug Info:**")
+        st.write(f"- User entered password length: {len(user_password)}")
+        st.write(f"- Expected password length: {len(correct_password) if correct_password else 0}")
+        st.write(f"- Passwords match: {user_password == correct_password}")
+        st.write(f"- User password (first 3 chars): {user_password[:3] if user_password else 'None'}...")
+        st.write(f"- Expected password (first 3 chars): {correct_password[:3] if correct_password else 'None'}...")
         
         if user_password == correct_password:
             st.session_state["password_correct"] = True
