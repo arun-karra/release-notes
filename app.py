@@ -43,16 +43,38 @@ def is_notion_configured():
     if not NOTION_AVAILABLE:
         return False
     
-    # Check for Notion token
+    # Check for Notion token - try multiple sources
     notion_token = os.getenv('NOTION_TOKEN')
+    
+    # If not found locally, try Streamlit secrets
     if not notion_token:
         try:
+            import streamlit as st
             if hasattr(st, 'secrets') and st.secrets:
                 notion_token = st.secrets.get('NOTION_TOKEN')
         except:
             pass
     
     return bool(notion_token)
+
+def debug_notion_config():
+    """Debug function to help troubleshoot Notion configuration"""
+    debug_info = {
+        'NOTION_AVAILABLE': NOTION_AVAILABLE,
+        'env_token': bool(os.getenv('NOTION_TOKEN')),
+        'st_secrets_available': False,
+        'st_secrets_token': False
+    }
+    
+    try:
+        import streamlit as st
+        debug_info['st_secrets_available'] = hasattr(st, 'secrets') and bool(st.secrets)
+        if debug_info['st_secrets_available']:
+            debug_info['st_secrets_token'] = bool(st.secrets.get('NOTION_TOKEN'))
+    except:
+        pass
+    
+    return debug_info
 
 # Configuration
 LINEAR_API_KEY = os.getenv('LINEAR_API_KEY')
@@ -363,6 +385,11 @@ def main():
                                 notion = NotionIntegration()
                                 database_id = st.session_state.get('selected_database_id')
                                 
+                                # Debug information
+                                st.info(f"Debug: database_id = {database_id}")
+                                st.info(f"Debug: release_version = {release_label}")
+                                st.info(f"Debug: content length = {len(release_notes)} characters")
+                                
                                 with st.spinner("Creating Notion page..."):
                                     page_id = notion.create_release_notes_page(
                                         release_version=release_label,
@@ -374,6 +401,10 @@ def main():
                                 
                             except Exception as e:
                                 st.error(f"❌ Failed to create Notion page: {str(e)}")
+                                # Add more detailed error information
+                                st.error(f"Error details: {type(e).__name__}: {str(e)}")
+                                import traceback
+                                st.error(f"Traceback: {traceback.format_exc()}")
                     
                     with col2:
                         if st.button("Update Existing Page", type="secondary"):
@@ -442,6 +473,9 @@ def main():
                                 notion = NotionIntegration()
                                 database_id = st.session_state.get('selected_database_id')
                                 
+                                # Debug information
+                                st.info(f"Debug: database_id = {database_id}")
+                                
                                 with st.spinner("Creating Notion page..."):
                                     page_id = notion.create_release_notes_page(
                                         release_version=custom_label,
@@ -453,6 +487,8 @@ def main():
                                 
                             except Exception as e:
                                 st.error(f"❌ Failed to create Notion page: {str(e)}")
+                                # Add more detailed error information
+                                st.error(f"Error details: {type(e).__name__}: {str(e)}")
                     
                     with col2:
                         if st.button("Update Existing Page", type="secondary"):
@@ -508,6 +544,12 @@ def main():
                 st.sidebar.error("Please check your NOTION_TOKEN and ensure the integration has proper permissions.")
         else:
             st.sidebar.warning("⚠️ Notion not configured")
+            
+            # Add debug information in development
+            if st.checkbox("Show debug info", key="debug_notion"):
+                debug_info = debug_notion_config()
+                st.sidebar.json(debug_info)
+            
             st.sidebar.markdown("""
             To enable Notion integration, add to your `.env` file (local) or Streamlit secrets (cloud):
             ```

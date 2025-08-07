@@ -64,7 +64,7 @@ class NotionIntegration:
             # Convert markdown to Notion blocks
             blocks = self._markdown_to_notion_blocks(markdown_content)
             
-            # Prepare page properties
+            # Prepare page properties - use simpler properties that are more likely to exist
             properties = {
                 "Name": {
                     "title": [
@@ -74,34 +74,46 @@ class NotionIntegration:
                             }
                         }
                     ]
-                },
-                "Version": {
-                    "rich_text": [
-                        {
-                            "text": {
-                                "content": release_version
-                            }
-                        }
-                    ]
-                },
-                "Date": {
-                    "date": {
-                        "start": datetime.now().isoformat()
-                    }
-                },
-                "Status": {
-                    "select": {
-                        "name": "Published"
-                    }
                 }
             }
             
-            # Add tags/categories if they exist in the content
-            categories = self._extract_categories(markdown_content)
-            if categories:
-                properties["Categories"] = {
-                    "multi_select": [{"name": cat} for cat in categories]
-                }
+            # Try to add additional properties if they exist in the database
+            try:
+                # Get database schema to see what properties are available
+                if database_id:
+                    database = self.client.databases.retrieve(database_id=database_id)
+                    db_properties = database.get('properties', {})
+                    
+                    # Add Version if it exists
+                    if 'Version' in db_properties:
+                        properties["Version"] = {
+                            "rich_text": [
+                                {
+                                    "text": {
+                                        "content": release_version
+                                    }
+                                }
+                            ]
+                        }
+                    
+                    # Add Date if it exists
+                    if 'Date' in db_properties:
+                        properties["Date"] = {
+                            "date": {
+                                "start": datetime.now().isoformat()
+                            }
+                        }
+                    
+                    # Add Status if it exists
+                    if 'Status' in db_properties:
+                        properties["Status"] = {
+                            "select": {
+                                "name": "Published"
+                            }
+                        }
+            except Exception as e:
+                # If we can't get the database schema, just use basic properties
+                pass
             
             # Create the page
             if database_id:
